@@ -34,8 +34,7 @@ class ANetTestDataset(Dataset):
                     test_sentences.append(ann['sentence'])
 
         test_sentences = list(map(text_proc.preprocess, test_sentences))
-        sentence_idx = text_proc.numericalize(text_proc.pad(test_sentences),
-                                                   device=-1)  # put in memory
+        sentence_idx = text_proc.numericalize(text_proc.pad(test_sentences)) 
 
         if sentence_idx.nelement() != 0 and len(test_sentences) != 0:
             if sentence_idx.size(0) != len(test_sentences):

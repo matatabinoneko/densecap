@@ -25,6 +25,7 @@ from torch.nn.utils import clip_grad_norm_
 import torch.distributed as dist
 import torch.utils.data.distributed
 
+
 # misc
 from data.anet_dataset import ANetDataset, anet_collate_fn, get_vocab_and_sentences
 from model.action_prop_dense_cap import ActionPropDenseCap

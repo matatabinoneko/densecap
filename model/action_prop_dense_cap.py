@@ -409,7 +409,7 @@ class ActionPropDenseCap(nn.Module):
 
                     hasoverlap = False
                     if crt_nproposal > 0:
-                        if np.max(segment_iou(np.array([pred_start, pred_end]), pred_results[:crt_nproposal])) > nms_thresh:
+                        if np.max(segment_iou(np.array([pred_start.to("cpu"), pred_end.to("cpu")]), pred_results[:crt_nproposal])) > nms_thresh:
                             hasoverlap = True
 
                     if not hasoverlap:

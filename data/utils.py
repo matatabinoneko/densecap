@@ -14,9 +14,10 @@ import numpy as np
 API = 'http://ec2-52-11-11-89.us-west-2.compute.amazonaws.com/challenge17/api.py'
 
 def get_blocked_videos(api=API):
-    api_url = '{}?action=get_blocked'.format(api)
-    response = urllib.request.urlopen(api_url)
-    return json.loads(response.read().decode('utf-8'))
+    # api_url = '{}?action=get_blocked'.format(api)
+    # response = urllib.request.urlopen(api_url)
+    # return json.loads(response.read().decode('utf-8'))
+    return dict()
 
 def interpolated_prec_rec(prec, rec):
     """Interpolated AP - VOCdevkit from VOC 2011.

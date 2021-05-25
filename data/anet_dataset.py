@@ -88,8 +88,7 @@ class ANetDataset(Dataset):
                             train_sentences.append(ann['sentence'])
 
             train_sentences = list(map(text_proc.preprocess, train_sentences))
-            sentence_idx = text_proc.numericalize(text_proc.pad(train_sentences),
-                                                       device=-1)  # put in memory
+            sentence_idx = text_proc.numericalize(text_proc.pad(train_sentences),)  # put in memory
             if sentence_idx.size(0) != len(train_sentences):
                 raise Exception("Error in numericalize sentences")
 

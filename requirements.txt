@@ -1,5 +1,10 @@
-argparse
-pyyaml
-pandas
-torchvision
-torchtext
+torchtext==0.4.0
+torchvision==0.9.1
+Cython==0.29.23
+numpy==1.19.5
+pandas==1.1.5
+Pillow==8.2.0
+PyYAML==5.4.1
+torch==1.8.1
+pycocoevalcap==1.2
+spacy==2.1.0

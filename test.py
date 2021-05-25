@@ -73,6 +73,9 @@ parser.add_argument('--batch_size', default=1, type=int, help='what is the batch
 parser.add_argument('--cuda', dest='cuda', action='store_true', help='use gpu')
 parser.add_argument('--id', default='', help='an id identifying this run/job. used in cross-val and appended when writing progress files')
 
+############# add ################
+parser.add_argument('--result_root', default='./results', type=str, help='the feature root')
+###################################
 
 parser.set_defaults(cuda=False, learn_mask=False, gated_mask=False)
 
@@ -210,11 +213,11 @@ def eval_results(densecap_result, prop_result, args):
                      'external_data':{'used':'true',
                       'details':'global_pool layer from BN-Inception pretrained from ActivityNet \
                                  and ImageNet (https://github.com/yjxiong/anet2016-cuhk)'}}
-    with open(os.path.join('./results/', 'densecap_'+args.val_data_folder+'_'+args.id+ '.json'), 'w') as f:
+    with open(os.path.join(args.result_root ,'densecap_'+args.val_data_folder+'_' + args.id + '.json'), 'w') as f:
         json.dump(dense_cap_all, f)
 
     subprocess.Popen(["python2", args.densecap_eval_file, "-s", \
-                      os.path.join('./results/', 'densecap_'+args.val_data_folder+'_' + args.id + '.json'), \
+                      os.path.join(args.result_root ,'prop_'+args.val_data_folder+'_' + args.id + '.json'), \
                       "-v", "-r"] + \
                       args.densecap_references \
                       )
@@ -224,11 +227,11 @@ def eval_results(densecap_result, prop_result, args):
                 'external_data':{'used':'true',
                 'details':'global_pool layer from BN-Inception pretrained from ActivityNet \
                            and ImageNet (https://github.com/yjxiong/anet2016-cuhk)'}}
-    with open(os.path.join('./results/', 'prop_'+args.val_data_folder+'_'+args.id+ '.json'), 'w') as f:
+    with open(os.path.join(args.result_root ,'prop_'+args.val_data_folder+'_'+args.id+ '.json'), 'w') as f:
         json.dump(prop_all, f)
 
     anet_proposal = ANETproposal(args.dataset_file,
-                                 os.path.join('./results/', 'prop_'+args.val_data_folder+'_' + args.id + '.json'),
+                                 os.path.join(args.result_root ,'prop_'+args.val_data_folder+'_' + args.id + '.json'),
                                  tiou_thresholds=np.linspace(0.5, 0.95, 10),
                                  max_avg_nr_proposals=100,
                                  subset=args.val_data_folder, verbose=True, check_status=True)

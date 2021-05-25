@@ -1,0 +1,12 @@
+# dataset specific settings for anet
+dataset: "anet"
+dataset_file: "/groups2/gcb50246/tasuku/project/video-and-nlp2021/anet/anet_annotations_trainval_with_kitayama_cap_head.json"
+feature_root: "/groups2/gcb50246/tasuku/project/video-and-nlp2021/anet/data"
+densecap_references:
+    [
+        "/groups2/gcb50246/tasuku/project/video-and-nlp2021/anet/data/anet/val_1.json",
+        "/groups2/gcb50246/tasuku/project/video-and-nlp2021/anet/data/anet/val_2.json",
+    ]
+dur_file: "/groups2/gcb50246/tasuku/project/video-and-nlp2021/anet/data/anet_duration_frame.csv"
+kernel_list:
+    [1, 2, 3, 4, 5, 7, 9, 11, 15, 21, 29, 41, 57, 71, 111, 161, 211, 251]
