@@ -1,6 +1,9 @@
-work_dir=${1}
-GPU=${2}
-. ./settings_abci.sh $work_dir $GPU
+setting_file=${1}
+work_dir=${2}
+GPU=${3}
+
+. ${setting_file} ${work_dir}
+
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"

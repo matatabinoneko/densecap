@@ -3,8 +3,10 @@
 # and then: bash jobs.sh
 # you can do things like: bash generate_jobs.sh | head -1 > job.sh
 
-work_dir=${1}
-GPU=${2:-0}
-. ./settings_abci.sh ${work_dir} ${GPU}
+setting_file=${1}
+work_dir=${2}
+GPU=${3:-0}
 
-qsub -cwd -g $GROUP -l rt_G.large=1 -l h_rt=01:00:00 -o ${work_dir}/test.sh.stdout -e ${work_dir}/test.sh.stderr -v bash test_discribe.sh $work_dir ${GPU}
+. ${setting_file} ${work_dir}
+
+qsub -cwd -g $GROUP -l rt_G.large=1 -l h_rt=01:00:00 -o ${work_dir}/test.sh.stdout -e ${work_dir}/test.sh.stderr -v bash test_discribe.sh $setting_file $work_dir ${GPU}

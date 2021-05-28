@@ -1,12 +1,12 @@
 # dataset specific settings for anet
 dataset: "anet"
-dataset_file: "/work01/tasuku/project/video-and-nlp-2021/yahoo/data/anet_annotations_trainval_with_kitayama_cap.json"
-feature_root: "/work01/tasuku/project/video-and-nlp-2021/yahoo/data"
+dataset_file: "/work01/video-and-nlp-2021/anet/debug_data/anet_annotations_trainval_with_kitayama_cap_head.json"
+feature_root: "/work01/video-and-nlp-2021/anet/debug_data"
 densecap_references:
     [
-        "/work01/kitayama/video-and-nlp/data/anet/val_1.json",
-        "/work01/kitayama/video-and-nlp/data/anet/val_2.json",
+        "/work01/video-and-nlp-2021/anet/debug_data/val_1_head.json",
+        "/work01/video-and-nlp-2021/anet/debug_data/val_2_head.json",
     ]
-dur_file: "/work01/kitayama/video-and-nlp/data/anet/anet_duration_frame.csv"
+dur_file: "/work01/video-and-nlp-2021/anet/debug_data/anet_duration_frame_head.csv"
 kernel_list:
     [1, 2, 3, 4, 5, 7, 9, 11, 15, 21, 29, 41, 57, 71, 111, 161, 211, 251]

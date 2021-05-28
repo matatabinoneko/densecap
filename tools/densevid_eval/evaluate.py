@@ -10,7 +10,9 @@ import json
 import random
 import string
 import sys
-sys.path.insert(0, './coco-caption') # Hack to allow the import of pycocoeval
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), './coco-caption'))
 
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocoevalcap.bleu.bleu import Bleu
