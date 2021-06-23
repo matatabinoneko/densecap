@@ -217,7 +217,7 @@ def eval_results(densecap_result, prop_result, args):
         json.dump(dense_cap_all, f)
 
     subprocess.Popen(["python2", args.densecap_eval_file, "-s", \
-                      os.path.join(args.result_root ,'prop_'+args.val_data_folder+'_' + args.id + '.json'), \
+                      os.path.join(args.result_root ,'densecap_'+args.val_data_folder+'_' + args.id + '.json'), \
                       "-v", "-r"] + \
                       args.densecap_references \
                       )

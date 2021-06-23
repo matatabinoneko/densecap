@@ -1,4 +1,5 @@
 # dataset specific settings for anet
+# 自分達で作成したデータ
 dataset: "anet"
 dataset_file: "/work01/video-and-nlp-2021/anet/data/anet/anet_annotations_trainval.json"
 feature_root: "/work01/video-and-nlp-2021/anet/data"

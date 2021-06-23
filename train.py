@@ -450,6 +450,9 @@ def train(epoch, model, optimizer, train_loader, vis, vis_window, args):
         else:
             mask_loss = cls_loss.new(1).fill_(0)
 
+        if torch.isnan(total_loss):
+            print("warning!!!!! loss is nan")
+            continue
         optimizer.zero_grad()
         total_loss.backward()
 

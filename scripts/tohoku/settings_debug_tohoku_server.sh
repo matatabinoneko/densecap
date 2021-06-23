@@ -12,6 +12,7 @@ checkpoint_path="${work_dir}/checkpoint/$id"
 log_path="${work_dir}/log/$id"
 max_epochs=2
 learning_rate=0.01
+seed=1234
 
 # test 
 epoch=1

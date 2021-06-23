@@ -1,0 +1,11 @@
+# dataset specific settings for yc2
+dataset: "anet"
+dataset_file: "/work01/video-and-nlp-2021/yahoo/data/anet_annotations_trainval_with_kitayama_cap.json"
+feature_root: "/work01/video-and-nlp-2021/anet/data"
+densecap_references:
+    [
+        "/work01/video-and-nlp-2021/yahoo/data/val_1_with_kitayama_cap.json",
+        "/work01/video-and-nlp-2021/yahoo/data/val_2_with_kitayama_cap.json",
+    ]
+dur_file: "/work01/video-and-nlp-2021/anet/data/anet/anet_duration_frame.csv"
+kernel_list: [1, 3, 5, 7, 9, 11, 15, 21, 27, 33, 41, 49, 57, 71, 111, 161]
