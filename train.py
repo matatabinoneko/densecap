@@ -24,6 +24,7 @@ from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
 import torch.distributed as dist
 import torch.utils.data.distributed
+import tensorboardX as tbx
 
 
 # misc
@@ -112,6 +113,9 @@ def parse_args():
     parser.add_argument('--seed', default=213, type=int, help='random number generator seed to use')
     parser.add_argument('--cuda', dest='cuda', action='store_true', help='use gpu')
     parser.add_argument('--enable_visdom', action='store_true', dest='enable_visdom')
+
+    # tensorboard log dir
+    parser.add_argument("--tensorboard_dir", type=str, help='tensorboard log directory')
 
 
     parser.set_defaults(cuda=False, save_train_samplelist=False,
@@ -236,6 +240,7 @@ def get_model(text_proc, args):
 
 
 def main(args):
+    writer = tbx.SummaryWriter(args.tensorboard_dir)
     try:
         os.makedirs(args.checkpoint_path)
     except OSError as e:
@@ -397,6 +402,14 @@ def main(args):
             val_cls_loss, val_reg_loss, val_sent_loss, val_mask_loss
         ))
         print('-'*80)
+        writer.add_scalar('training loss',epoch_loss, train_epoch)
+        writer.add_scalar('valid loss', valid_loss, train_epoch)
+        writer.add_scalar('val_cls', val_cls_loss, train_epoch)
+        writer.add_scalar('val_reg', val_reg_loss, train_epoch)
+        writer.add_scalar('val_sentence', val_sent_loss, train_epoch)
+        writer.add_scalar('val_mask', val_mask_loss, train_epoch)
+      
+    writer.close()
 
 
 ### Training the network ###

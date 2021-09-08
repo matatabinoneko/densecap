@@ -10,8 +10,9 @@ dist_url="file://${dist_path}/nonexistent_file"
 id=0
 checkpoint_path="${work_dir}/checkpoint/$id"
 log_path="${work_dir}/log/$id"
+tensorboard_dir="${work_dir}/runs"
 max_epochs=20
-learning_rate=0.1
+learning_rate=0.01
 seed=1234
 
 # test 
