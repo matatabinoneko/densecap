@@ -208,15 +208,24 @@ def validate(model, loader, args):
             #       args.pos_thresh,
             #       args.stride_factor,
             #       args.gated_mask)
-            all_proposal_results = model.inference(image_feat,
-                                                   original_num_frame,
-                                                   sampling_sec,
-                                                   args.min_prop_num,
-                                                   args.max_prop_num,
-                                                   args.min_prop_before_nms,
-                                                   args.pos_thresh,
-                                                   args.stride_factor,
-                                                   gated_mask=args.gated_mask)
+            # all_proposal_results = model.inference(image_feat,
+            #                                        original_num_frame,
+            #                                        sampling_sec,
+            #                                        args.min_prop_num,
+            #                                        args.max_prop_num,
+            #                                        args.min_prop_before_nms,
+            #                                        args.pos_thresh,
+            #                                        args.stride_factor,
+            #                                        gated_mask=args.gated_mask)
+            all_proposal_results = model.random_inference(image_feat,
+                                                          original_num_frame,
+                                                          sampling_sec,
+                                                          args.min_prop_num,
+                                                          args.max_prop_num,
+                                                          args.min_prop_before_nms,
+                                                          args.pos_thresh,
+                                                          args.stride_factor,
+                                                          gated_mask=args.gated_mask)
 
             for b in range(len(video_prefix)):
                 vid = video_prefix[b].split('/')[-1]
