@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 
 class ANetTestDataset(Dataset):
     def __init__(self, image_path, slide_window_size,
-                 text_proc, raw_data, split, learn_mask=False):
+                 text_proc, raw_data, split, learn_mask=False, debug=False):
         super(ANetTestDataset, self).__init__()
 
         self.split = split
@@ -24,7 +24,9 @@ class ANetTestDataset(Dataset):
         self.sample_list = []  # list of list for data samples
 
         test_sentences = []
-        for vid, val in raw_data.items():
+        for i, (vid, val) in enumerate(raw_data.items()):
+            if debug and 10 < i:
+                break
             annotations = val['annotations']
             if val['subset'] == self.split and os.path.isfile(os.path.join(split_path, vid+'_bn.npy')):
                 video_prefix = os.path.join(split_path, vid)
@@ -34,14 +36,16 @@ class ANetTestDataset(Dataset):
                     test_sentences.append(ann['sentence'])
 
         test_sentences = list(map(text_proc.preprocess, test_sentences))
-        sentence_idx = text_proc.numericalize(text_proc.pad(test_sentences)) 
+        sentence_idx = text_proc.numericalize(text_proc.pad(test_sentences))
 
         if sentence_idx.nelement() != 0 and len(test_sentences) != 0:
             if sentence_idx.size(0) != len(test_sentences):
                 raise Exception("Error in numericalize sentences")
 
         idx = 0
-        for vid, val in raw_data.items():
+        for i, (vid, val) in enumerate(raw_data.items()):
+            if debug and 10 < i:
+                break
             if val['subset'] == self.split and os.path.isfile(os.path.join(split_path, vid+'_bn.npy')):
                 for ann in val['annotations']:
                     ann['sentence_idx'] = sentence_idx[idx]
@@ -87,7 +91,7 @@ def anet_test_collate_fn(batch_lst):
     for batch_idx in range(batch_size):
         img_feat, T, vid = batch_lst[batch_idx]
 
-        img_batch[batch_idx,:] = img_feat
+        img_batch[batch_idx, :] = img_feat
         frame_length[batch_idx] = T
         video_prefix.append(vid)
 

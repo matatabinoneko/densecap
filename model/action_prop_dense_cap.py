@@ -66,7 +66,7 @@ class ActionPropDenseCap(nn.Module):
     def __init__(self, d_model, d_hidden, n_layers, n_heads, vocab,
                  in_emb_dropout, attn_dropout, vis_emb_dropout,
                  cap_dropout, nsamples, kernel_list, stride_factor,
-                 learn_mask=False, window_length=480):
+                 learn_mask=False, window_length=480, embedding=None):
         super(ActionPropDenseCap, self).__init__()
 
         self.kernel_list = kernel_list
@@ -93,7 +93,8 @@ class ActionPropDenseCap(nn.Module):
                                    d_hidden=d_hidden,
                                    n_layers=n_layers,
                                    n_heads=n_heads,
-                                   drop_ratio=attn_dropout)
+                                   drop_ratio=attn_dropout,
+                                   )
 
         self.vis_dropout = DropoutTime1D(vis_emb_dropout)
 
@@ -123,7 +124,8 @@ class ActionPropDenseCap(nn.Module):
                                          d_hidden=d_hidden,
                                          n_layers=n_layers,
                                          n_heads=n_heads,
-                                         drop_ratio=cap_dropout)
+                                         drop_ratio=cap_dropout,
+                                         embedding=embedding)
 
         self.bce_loss = nn.BCEWithLogitsLoss()
         self.reg_loss = nn.SmoothL1Loss()
