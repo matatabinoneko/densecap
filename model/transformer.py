@@ -5,6 +5,8 @@
  For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+from pycocoevalcap.meteor.meteor import Meteor
+from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -23,25 +25,24 @@ import math
 import uuid
 import numpy as np
 
-sys.path.insert(0, './tools/densevid_eval/coco-caption') # Hack to allow the import of pycocoeval
-from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-from pycocoevalcap.meteor.meteor import Meteor
+# Hack to allow the import of pycocoeval
+sys.path.insert(0, './tools/densevid_eval/coco-caption')
 
 # import contexts
 
 INF = 1e10
 
+
 def positional_encodings_like(x, t=None):
     if t is None:
         positions = torch.arange(0, x.size(1)).float()
         if x.is_cuda:
-           positions = positions.cuda(x.get_device())
+            positions = positions.cuda(x.get_device())
     else:
         positions = t
     encodings = torch.zeros(*x.size()[1:])
     if x.is_cuda:
         encodings = encodings.cuda(x.get_device())
-
 
     for channel in range(x.size(-1)):
         if channel % 2 == 0:
@@ -52,18 +53,22 @@ def positional_encodings_like(x, t=None):
                 positions / 10000 ** ((channel - 1) / x.size(2)))
     return Variable(encodings)
 
+
 def mask(targets, out):
     mask = (targets != 1)
     out_mask = mask.unsqueeze(-1).expand_as(out)
     return targets[mask], out[out_mask].view(-1, out.size(-1))
 
 # torch.matmul can't do (4, 3, 2) @ (4, 2) -> (4, 3)
+
+
 def matmul(x, y):
     if x.dim() == y.dim():
         return x @ y
     if x.dim() == y.dim() - 1:
         return (x.unsqueeze(-2) @ y).squeeze(-2)
     return (x @ y.unsqueeze(-2)).squeeze(-2)
+
 
 class LayerNorm(nn.Module):
 
@@ -78,6 +83,7 @@ class LayerNorm(nn.Module):
         std = x.std(-1, keepdim=True)
         return self.gamma * (x - mean) / (std + self.eps) + self.beta
 
+
 class ResidualBlock(nn.Module):
 
     def __init__(self, layer, d_model, drop_ratio):
@@ -88,6 +94,7 @@ class ResidualBlock(nn.Module):
 
     def forward(self, *x):
         return self.layernorm(x[0] + self.dropout(self.layer(*x)))
+
 
 class Attention(nn.Module):
 
@@ -106,6 +113,7 @@ class Attention(nn.Module):
             dot_products.data.sub_(tri.unsqueeze(0))
         return matmul(self.dropout(F.softmax(dot_products / self.scale, dim=-1)), value)
 
+
 class MultiHead(nn.Module):
 
     def __init__(self, d_key, d_value, n_heads, drop_ratio, causal=False):
@@ -122,7 +130,8 @@ class MultiHead(nn.Module):
         query, key, value = (
             x.chunk(self.n_heads, -1) for x in (query, key, value))
         return self.wo(torch.cat([self.attention(q, k, v)
-                          for q, k, v in zip(query, key, value)], -1))
+                                  for q, k, v in zip(query, key, value)], -1))
+
 
 class FeedForward(nn.Module):
 
@@ -133,6 +142,7 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         return self.linear2(F.relu(self.linear1(x)))
+
 
 class EncoderLayer(nn.Module):
 
@@ -146,6 +156,7 @@ class EncoderLayer(nn.Module):
 
     def forward(self, x):
         return self.feedforward(self.selfattn(x, x, x))
+
 
 class DecoderLayer(nn.Module):
 
@@ -163,6 +174,7 @@ class DecoderLayer(nn.Module):
     def forward(self, x, encoding):
         x = self.selfattn(x, x, x)
         return self.feedforward(self.attention(x, encoding, encoding))
+
 
 class Encoder(nn.Module):
 
@@ -189,15 +201,38 @@ class Encoder(nn.Module):
             encoding.append(x)
         return encoding
 
+
 class Decoder(nn.Module):
 
     def __init__(self, d_model, d_hidden, vocab, n_layers, n_heads,
-                 drop_ratio):
+                 drop_ratio, embedding):
         super().__init__()
+
+        if embedding:
+            self.out = nn.Linear(d_model, len(vocab), bias=False)
+
+            from transformers import GPT2Tokenizer, GPT2Model
+            gpt_model = GPT2Model.from_pretrained("gpt2")
+            gpt_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+            # GPT2を
+            # ベクトルを置換して重みをfreezeする
+            print(self.out.weight.size())
+
+            for i in range(len(vocab)):
+                word = vocab.itos[i]
+                inputs = gpt_tokenizer(word, return_tensors="pt")
+                outputs = gpt_model(**inputs).last_hidden_state.mean(-2).squeeze(0)
+                self.out.weight.data[i] = outputs
+            self.out.weight.requires_grad = False
+            print(self.out.weight.size())
+        else:
+            # ここをgpt2の行列に入れ替える(たんごべくとる＊vocabsizeになってる)
+            self.out = nn.Linear(d_model, len(vocab))
+
         self.layers = nn.ModuleList(
             [DecoderLayer(d_model, d_hidden, n_heads, drop_ratio)
              for i in range(n_layers)])
-        self.out = nn.Linear(d_model, len(vocab))
+
         self.dropout = nn.Dropout(drop_ratio)
         self.d_model = d_model
         self.vocab = vocab
@@ -229,7 +264,7 @@ class Decoder(nn.Module):
                         self.vocab.stoi['<init>'])), embedW)
             else:
                 hiddens[0][:, t] = hiddens[0][:, t] + F.embedding(prediction[:, t - 1],
-                                                                embedW)
+                                                                  embedW)
             hiddens[0][:, t] = self.dropout(hiddens[0][:, t])
             for l in range(len(self.layers)):
                 x = hiddens[l][:, :t + 1]
@@ -239,7 +274,6 @@ class Decoder(nn.Module):
 
             _, prediction[:, t] = self.out(hiddens[-1][:, t]).max(-1)
         return hiddens, prediction
-
 
     def sampling(self, encoding, gt_token, T, sample_prob, is_argmax=True):
         B, _, H = encoding[0].size()
@@ -265,7 +299,7 @@ class Decoder(nn.Module):
                         embedW)
                 else:
                     hiddens[0][:, t] = hiddens[0][:, t] + F.embedding(
-                        gt_token[:, t], # t since gt_token start with init
+                        gt_token[:, t],  # t since gt_token start with init
                         embedW)
             hiddens[0][:, t] = self.dropout(hiddens[0][:, t])
             for l in range(len(self.layers)):
@@ -279,8 +313,8 @@ class Decoder(nn.Module):
             else:
                 pred_prob = F.softmax(self.out(hiddens[-1][:, t]), dim=-1)
                 prediction[:, t] = torch.multinomial(pred_prob,
-                                                        num_samples=1,
-                                                        replacement=True)
+                                                     num_samples=1,
+                                                     replacement=True)
                 prediction[:, t].detach_()
 
         return prediction
@@ -318,13 +352,13 @@ class Transformer(nn.Module):
 class RealTransformer(nn.Module):
 
     def __init__(self, d_model, encoder, vocab_trg, d_hidden=2048,
-                 n_layers=6, n_heads=8, drop_ratio=0.1):
+                 n_layers=6, n_heads=8, drop_ratio=0.1, embedding=None):
         super().__init__()
         # self.encoder = Encoder(d_model, d_hidden, n_vocab_src, n_layers,
         #                        n_heads, drop_ratio)
         self.encoder = encoder
         self.decoder = Decoder(d_model, d_hidden, vocab_trg, n_layers,
-                              n_heads, drop_ratio)
+                               n_heads, drop_ratio, embedding)
         self.n_layers = n_layers
         self.tokenizer = PTBTokenizer()
 
@@ -398,13 +432,14 @@ class RealTransformer(nn.Module):
             model_pred), 1)
         h = self.decoder(new_y, encoding)
         B, T, H = h.size()
-        logits = self.decoder.out(h.view(-1, H)) #.view(B, T, -1)
+        logits = self.decoder.out(h.view(-1, H))  # .view(B, T, -1)
 
-        mask = (s[:,1:] != 1).float()
+        mask = (s[:, 1:] != 1).float()
         _, pred_sample = torch.max(logits, -1)
 
         p_model = F.log_softmax(logits, dim=-1)
-        logp = p_model[torch.arange(0,B*T).type(logits.data.type()).long(), pred_sample.data].view(B, T)
+        logp = p_model[torch.arange(
+            0, B*T).type(logits.data.type()).long(), pred_sample.data].view(B, T)
 
         pred_sample = pred_sample.view(B, T)
 
@@ -421,9 +456,9 @@ class RealTransformer(nn.Module):
         # rewards
         sentence_greedy, sentence_sample, sentence_gt = {}, {}, {}
         for i in range(len(pred_greedy)):
-            sentence_greedy[i] = [{'caption':pred_greedy[i]}]
-            sentence_sample[i] = [{'caption':self.denum(pred_sample.data[i])}]
-            sentence_gt[i] = [{'caption':self.denum(s.data[i,1:])}]
+            sentence_greedy[i] = [{'caption': pred_greedy[i]}]
+            sentence_sample[i] = [{'caption': self.denum(pred_sample.data[i])}]
+            sentence_gt[i] = [{'caption': self.denum(s.data[i, 1:])}]
 
         tok_greedy = self.tokenizer.tokenize(sentence_greedy)
         tok_sample = self.tokenizer.tokenize(sentence_sample)
@@ -434,6 +469,6 @@ class RealTransformer(nn.Module):
         r_diff = [r_s-r_g for (r_s, r_g) in zip(r_greedy, r_sample)]
         r_diff = Variable(torch.Tensor(r_diff).type(logp.data.type()))
 
-        loss = - torch.mean(torch.sum(r_diff.view(-1,1) * logp * mask, 1))
+        loss = - torch.mean(torch.sum(r_diff.view(-1, 1) * logp * mask, 1))
 
         return loss

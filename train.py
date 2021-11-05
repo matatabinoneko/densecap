@@ -32,53 +32,74 @@ from data.anet_dataset import ANetDataset, anet_collate_fn, get_vocab_and_senten
 from model.action_prop_dense_cap import ActionPropDenseCap
 from data.utils import update_values
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
     # Data input settings
-    parser.add_argument('--cfgs_file', default='cfgs/anet.yml', type=str, help='dataset specific settings. anet | yc2')
-    parser.add_argument('--dataset', default='', type=str, help='which dataset to use. two options: anet | yc2')
+    parser.add_argument('--cfgs_file', default='cfgs/anet.yml',
+                        type=str, help='dataset specific settings. anet | yc2')
+    parser.add_argument('--dataset', default='', type=str,
+                        help='which dataset to use. two options: anet | yc2')
     parser.add_argument('--dataset_file', default='', type=str)
     parser.add_argument('--feature_root', default='', type=str, help='the feature root')
     parser.add_argument('--dur_file', default='', type=str)
-    parser.add_argument('--train_data_folder', default=['training'], type=str, nargs='+', help='training data folder')
-    parser.add_argument('--val_data_folder', default=['validation'], help='validation data folder')
+    parser.add_argument('--train_data_folder',
+                        default=['training'], type=str, nargs='+', help='training data folder')
+    parser.add_argument('--val_data_folder',
+                        default=['validation'], help='validation data folder')
     parser.add_argument('--save_train_samplelist', action='store_true')
     parser.add_argument('--load_train_samplelist', action='store_true')
-    parser.add_argument('--train_samplelist_path', type=str, default='/z/home/luozhou/subsystem/densecap_vid/train_samplelist.pkl')
+    parser.add_argument('--train_samplelist_path', type=str,
+                        default='/z/home/luozhou/subsystem/densecap_vid/train_samplelist.pkl')
     parser.add_argument('--save_valid_samplelist', action='store_true')
     parser.add_argument('--load_valid_samplelist', action='store_true')
-    parser.add_argument('--valid_samplelist_path', type=str, default='/z/home/luozhou/subsystem/densecap_vid/valid_samplelist.pkl')
-    parser.add_argument('--start_from', default='', help='path to a model checkpoint to initialize model weights from. Empty = dont')
+    parser.add_argument('--valid_samplelist_path', type=str,
+                        default='/z/home/luozhou/subsystem/densecap_vid/valid_samplelist.pkl')
+    parser.add_argument('--start_from', default='',
+                        help='path to a model checkpoint to initialize model weights from. Empty = dont')
     parser.add_argument('--max_sentence_len', default=20, type=int)
     parser.add_argument('--num_workers', default=1, type=int)
 
     # Model settings: General
-    parser.add_argument('--d_model', default=1024, type=int, help='size of the rnn in number of hidden nodes in each layer')
+    parser.add_argument('--d_model', default=1024, type=int,
+                        help='size of the rnn in number of hidden nodes in each layer')
     parser.add_argument('--d_hidden', default=2048, type=int)
     parser.add_argument('--n_heads', default=8, type=int)
     parser.add_argument('--in_emb_dropout', default=0.1, type=float)
     parser.add_argument('--attn_dropout', default=0.2, type=float)
     parser.add_argument('--vis_emb_dropout', default=0.1, type=float)
     parser.add_argument('--cap_dropout', default=0.2, type=float)
-    parser.add_argument('--image_feat_size', default=3072, type=int, help='the encoding size of the image feature')
-    parser.add_argument('--n_layers', default=2, type=int, help='number of layers in the sequence model')
-    parser.add_argument('--train_sample', default=20, type=int, help='total number of positive+negative training samples (2*U)')
-    parser.add_argument('--sample_prob', default=0, type=float, help='probability for use model samples during training')
+    parser.add_argument('--image_feat_size', default=3072, type=int,
+                        help='the encoding size of the image feature')
+    parser.add_argument('--n_layers', default=2, type=int,
+                        help='number of layers in the sequence model')
+    parser.add_argument('--train_sample', default=20, type=int,
+                        help='total number of positive+negative training samples (2*U)')
+    parser.add_argument('--sample_prob', default=0, type=float,
+                        help='probability for use model samples during training')
+    parser.add_argument(
+        "--embedding", choices=["gpt2", None], default=None, help="select embedding type")
 
     # Model settings: Proposal and mask
-    parser.add_argument('--slide_window_size', default=480, type=int, help='the (temporal) size of the sliding window')
-    parser.add_argument('--slide_window_stride', default=20, type=int, help='the step size of the sliding window')
-    parser.add_argument('--sampling_sec', default=0.5, help='sample frame (RGB and optical flow) with which time interval')
+    parser.add_argument('--slide_window_size', default=480, type=int,
+                        help='the (temporal) size of the sliding window')
+    parser.add_argument('--slide_window_stride', default=20, type=int,
+                        help='the step size of the sliding window')
+    parser.add_argument('--sampling_sec', default=0.5,
+                        help='sample frame (RGB and optical flow) with which time interval')
     parser.add_argument('--kernel_list', default=[1, 2, 3, 4, 5, 7, 9, 11, 15, 21, 29, 41, 57, 71, 111, 161, 211, 251],
                         type=int, nargs='+')
     parser.add_argument('--pos_thresh', default=0.7, type=float)
     parser.add_argument('--neg_thresh', default=0.3, type=float)
-    parser.add_argument('--stride_factor', default=50, type=int, help='the proposal temporal conv kernel stride is determined by math.ceil(kernel_len/stride_factor)')
+    parser.add_argument('--stride_factor', default=50, type=int,
+                        help='the proposal temporal conv kernel stride is determined by math.ceil(kernel_len/stride_factor)')
 
     # Optimization: General
-    parser.add_argument('--max_epochs', default=20, type=int, help='max number of epochs to run for')
-    parser.add_argument('--batch_size', default=32, type=int, help='what is the batch size in number of images per batch? (there will be x seq_per_img sentences)')
+    parser.add_argument('--max_epochs', default=20, type=int,
+                        help='max number of epochs to run for')
+    parser.add_argument('--batch_size', default=32, type=int,
+                        help='what is the batch size in number of images per batch? (there will be x seq_per_img sentences)')
     parser.add_argument('--valid_batch_size', default=64, type=int)
     parser.add_argument('--cls_weight', default=1.0, type=float)
     parser.add_argument('--reg_weight', default=10, type=float)
@@ -88,35 +109,50 @@ def parse_args():
     parser.add_argument('--gated_mask', action='store_true', dest='gated_mask')
 
     # Optimization
-    parser.add_argument('--optim',default='sgd', help='what update to use? rmsprop|sgd|sgdmom|adagrad|adam')
-    parser.add_argument('--learning_rate', default=0.1, type=float, help='learning rate')
-    parser.add_argument('--alpha', default=0.95, type=float, help='alpha for adagrad/rmsprop/momentum/adam')
+    parser.add_argument('--optim', default='sgd',
+                        help='what update to use? rmsprop|sgd|sgdmom|adagrad|adam')
+    parser.add_argument('--learning_rate', default=0.1,
+                        type=float, help='learning rate')
+    parser.add_argument('--alpha', default=0.95, type=float,
+                        help='alpha for adagrad/rmsprop/momentum/adam')
     parser.add_argument('--beta', default=0.999, type=float, help='beta used for adam')
-    parser.add_argument('--epsilon', default=1e-8, help='epsilon that goes into denominator for smoothing')
-    parser.add_argument('--loss_alpha_r', default=2, type=int, help='The weight for regression loss')
-    parser.add_argument('--patience_epoch', default=1, type=int, help='Epoch to wait to determine a pateau')
-    parser.add_argument('--reduce_factor', default=0.5, type=float, help='Factor of learning rate reduction')
-    parser.add_argument('--grad_norm', default=1, type=float, help='Gradient clipping norm')
+    parser.add_argument('--epsilon', default=1e-8,
+                        help='epsilon that goes into denominator for smoothing')
+    parser.add_argument('--loss_alpha_r', default=2, type=int,
+                        help='The weight for regression loss')
+    parser.add_argument('--patience_epoch', default=1, type=int,
+                        help='Epoch to wait to determine a pateau')
+    parser.add_argument('--reduce_factor', default=0.5, type=float,
+                        help='Factor of learning rate reduction')
+    parser.add_argument('--grad_norm', default=1, type=float,
+                        help='Gradient clipping norm')
 
     # Data parallel
-    parser.add_argument('--dist_url', default='file:///home/luozhou/nonexistent_file', type=str, help='url used to set up distributed training')
-    parser.add_argument('--dist_backend', default='gloo', type=str, help='distributed backend')
-    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
+    parser.add_argument('--dist_url', default='file:///home/luozhou/nonexistent_file',
+                        type=str, help='url used to set up distributed training')
+    parser.add_argument('--dist_backend', default='gloo',
+                        type=str, help='distributed backend')
+    parser.add_argument('--world_size', default=1, type=int,
+                        help='number of distributed processes')
     ################### add ################
-    parser.add_argument('--rank', default=0, type=int, help='rank of distributefd process')
+    parser.add_argument('--rank', default=0, type=int,
+                        help='rank of distributefd process')
     #########################################
 
     # Evaluation/Checkpointing
-    parser.add_argument('--save_checkpoint_every', default=1, type=int, help='how many epochs to save a model checkpoint?')
-    parser.add_argument('--checkpoint_path', default='./checkpoint', help='folder to save checkpoints into (empty = this folder)')
-    parser.add_argument('--losses_log_every', default=1, type=int, help='How often do we snapshot losses, for inclusion in the progress dump? (0 = disable)')
-    parser.add_argument('--seed', default=213, type=int, help='random number generator seed to use')
+    parser.add_argument('--save_checkpoint_every', default=1, type=int,
+                        help='how many epochs to save a model checkpoint?')
+    parser.add_argument('--checkpoint_path', default='./checkpoint',
+                        help='folder to save checkpoints into (empty = this folder)')
+    parser.add_argument('--losses_log_every', default=1, type=int,
+                        help='How often do we snapshot losses, for inclusion in the progress dump? (0 = disable)')
+    parser.add_argument('--seed', default=213, type=int,
+                        help='random number generator seed to use')
     parser.add_argument('--cuda', dest='cuda', action='store_true', help='use gpu')
     parser.add_argument('--enable_visdom', action='store_true', dest='enable_visdom')
 
     # tensorboard log dir
     parser.add_argument("--tensorboard_dir", type=str, help='tensorboard log directory')
-
 
     parser.set_defaults(cuda=False, save_train_samplelist=False,
                         load_train_samplelist=False,
@@ -125,7 +161,13 @@ def parse_args():
                         gated_mask=False,
                         enable_visdom=False)
 
+    parser.add_argument("--debug", action="store_true",
+                        default=False, help="debug mode")
+
     args = parser.parse_args()
+
+    if args.embedding == "gpt2":
+        args.d_model = 768
 
     with open(args.cfgs_file, 'r') as handle:
         options_yaml = yaml.load(handle)
@@ -134,7 +176,7 @@ def parse_args():
 
     # arguments inspection
     assert(args.slide_window_size >= args.slide_window_stride)
-    assert(args.sampling_sec == 0.5) # attention! sampling_sec is hard coded as 0.5
+    assert(args.sampling_sec == 0.5)  # attention! sampling_sec is hard coded as 0.5
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -148,7 +190,8 @@ def parse_args():
 
 def get_dataset(args):
     # process text
-    text_proc, raw_data = get_vocab_and_sentences(args.dataset_file, args.max_sentence_len)
+    text_proc, raw_data = get_vocab_and_sentences(
+        args.dataset_file, args.max_sentence_len, args.debug)
 
     # Create the dataset and data loader instance
     train_dataset = ANetDataset(args.feature_root,
@@ -163,6 +206,7 @@ def get_dataset(args):
                                 save_samplelist=args.save_train_samplelist,
                                 load_samplelist=args.load_train_samplelist,
                                 sample_listpath=args.train_samplelist_path,
+                                debug=args.debug,
                                 )
 
     # dist parallel, optional
@@ -191,7 +235,8 @@ def get_dataset(args):
                                 args.dataset,
                                 save_samplelist=args.save_valid_samplelist,
                                 load_samplelist=args.load_valid_samplelist,
-                                sample_listpath=args.valid_samplelist_path
+                                sample_listpath=args.valid_samplelist_path,
+                                debug=args.debug,
                                 )
 
     valid_loader = DataLoader(valid_dataset,
@@ -217,13 +262,14 @@ def get_model(text_proc, args):
                                nsamples=args.train_sample,
                                kernel_list=args.kernel_list,
                                stride_factor=args.stride_factor,
-                               learn_mask=args.mask_weight>0)
+                               learn_mask=args.mask_weight > 0,
+                               embedding=args.embedding)
 
     # Initialize the networks and the criterion
     if len(args.start_from) > 0:
         print("Initializing weights from {}".format(args.start_from))
         model.load_state_dict(torch.load(args.start_from,
-                                              map_location=lambda storage, location: storage))
+                                         map_location=lambda storage, location: storage))
 
     # Ship the model to GPU, maybe
     if args.cuda:
@@ -286,8 +332,8 @@ def main(args):
     if args.enable_visdom:
         import visdom
         vis = visdom.Visdom()
-        vis_window={'iter': None,
-                    'loss': None}
+        vis_window = {'iter': None,
+                      'loss': None}
     else:
         vis, vis_window = None, None
 
@@ -321,71 +367,72 @@ def main(args):
             if vis_window['loss'] is None:
                 if not args.distributed or (args.distributed and dist.get_rank() == 0):
                     vis_window['loss'] = vis.line(
-                    X=np.tile(np.arange(len(all_eval_losses)),
-                              (6,1)).T,
-                    Y=np.column_stack((np.asarray(all_training_losses),
-                                       np.asarray(all_eval_losses),
-                                       np.asarray(all_cls_losses),
-                                       np.asarray(all_reg_losses),
-                                       np.asarray(all_sent_losses),
-                                       np.asarray(all_mask_losses))),
-                    opts=dict(title='Loss',
-                              xlabel='Validation Iter',
-                              ylabel='Loss',
-                              legend=['train',
-                                      'dev',
-                                      'dev_cls',
-                                      'dev_reg',
-                                      'dev_sentence',
-                                      'dev_mask']))
+                        X=np.tile(np.arange(len(all_eval_losses)),
+                                  (6, 1)).T,
+                        Y=np.column_stack((np.asarray(all_training_losses),
+                                           np.asarray(all_eval_losses),
+                                           np.asarray(all_cls_losses),
+                                           np.asarray(all_reg_losses),
+                                           np.asarray(all_sent_losses),
+                                           np.asarray(all_mask_losses))),
+                        opts=dict(title='Loss',
+                                  xlabel='Validation Iter',
+                                  ylabel='Loss',
+                                  legend=['train',
+                                          'dev',
+                                          'dev_cls',
+                                          'dev_reg',
+                                          'dev_sentence',
+                                          'dev_mask']))
             else:
                 if not args.distributed or (
-                    args.distributed and dist.get_rank() == 0):
+                        args.distributed and dist.get_rank() == 0):
                     vis.line(
-                    X=np.tile(np.arange(len(all_eval_losses)),
-                              (6, 1)).T,
-                    Y=np.column_stack((np.asarray(all_training_losses),
-                                       np.asarray(all_eval_losses),
-                                       np.asarray(all_cls_losses),
-                                       np.asarray(all_reg_losses),
-                                       np.asarray(all_sent_losses),
-                                       np.asarray(all_mask_losses))),
-                    win=vis_window['loss'],
-                    opts=dict(title='Loss',
-                              xlabel='Validation Iter',
-                              ylabel='Loss',
-                              legend=['train',
-                                      'dev',
-                                      'dev_cls',
-                                      'dev_reg',
-                                      'dev_sentence',
-                                      'dev_mask']))
+                        X=np.tile(np.arange(len(all_eval_losses)),
+                                  (6, 1)).T,
+                        Y=np.column_stack((np.asarray(all_training_losses),
+                                           np.asarray(all_eval_losses),
+                                           np.asarray(all_cls_losses),
+                                           np.asarray(all_reg_losses),
+                                           np.asarray(all_sent_losses),
+                                           np.asarray(all_mask_losses))),
+                        win=vis_window['loss'],
+                        opts=dict(title='Loss',
+                                  xlabel='Validation Iter',
+                                  ylabel='Loss',
+                                  legend=['train',
+                                          'dev',
+                                          'dev_cls',
+                                          'dev_reg',
+                                          'dev_sentence',
+                                          'dev_mask']))
 
         if valid_loss < best_loss:
             best_loss = valid_loss
             if (args.distributed and dist.get_rank() == 0) or not args.distributed:
-                torch.save(model.module.state_dict(), os.path.join(args.checkpoint_path, 'best_model.t7'))
+                torch.save(model.module.state_dict(), os.path.join(
+                    args.checkpoint_path, 'best_model.t7'))
             print('*'*5)
             print('Better validation loss {:.4f} found, save model'.format(valid_loss))
 
         # save eval and train losses
         if (args.distributed and dist.get_rank() == 0) or not args.distributed:
-            torch.save({'train_loss':all_training_losses,
-                        'eval_loss':all_eval_losses,
-                        'eval_cls_loss':all_cls_losses,
-                        'eval_reg_loss':all_reg_losses,
-                        'eval_sent_loss':all_sent_losses,
-                        'eval_mask_loss':all_mask_losses,
+            torch.save({'train_loss': all_training_losses,
+                        'eval_loss': all_eval_losses,
+                        'eval_cls_loss': all_cls_losses,
+                        'eval_reg_loss': all_reg_losses,
+                        'eval_sent_loss': all_sent_losses,
+                        'eval_mask_loss': all_mask_losses,
                         }, os.path.join(args.checkpoint_path, 'model_losses.t7'))
 
         # learning rate decay
         scheduler.step(valid_loss)
 
         # validation/save checkpoint every a few epochs
-        if train_epoch%args.save_checkpoint_every == 0 or train_epoch == args.max_epochs:
+        if train_epoch % args.save_checkpoint_every == 0 or train_epoch == args.max_epochs:
             if (args.distributed and dist.get_rank() == 0) or not args.distributed:
                 torch.save(model.module.state_dict(),
-                       os.path.join(args.checkpoint_path, 'model_epoch_{}.t7'.format(train_epoch)))
+                           os.path.join(args.checkpoint_path, 'model_epoch_{}.t7'.format(train_epoch)))
 
         # all other process wait for the 1st process to finish
         # if args.distributed:
@@ -399,22 +446,22 @@ def main(args):
         print('val_cls: {:.4f}, '
               'val_reg: {:.4f}, val_sentence: {:.4f}, '
               'val mask: {:.4f}'.format(
-            val_cls_loss, val_reg_loss, val_sent_loss, val_mask_loss
-        ))
+                  val_cls_loss, val_reg_loss, val_sent_loss, val_mask_loss
+              ))
         print('-'*80)
-        writer.add_scalar('training loss',epoch_loss, train_epoch)
+        writer.add_scalar('training loss', epoch_loss, train_epoch)
         writer.add_scalar('valid loss', valid_loss, train_epoch)
         writer.add_scalar('val_cls', val_cls_loss, train_epoch)
         writer.add_scalar('val_reg', val_reg_loss, train_epoch)
         writer.add_scalar('val_sentence', val_sent_loss, train_epoch)
         writer.add_scalar('val_mask', val_mask_loss, train_epoch)
-      
+
     writer.close()
 
 
 ### Training the network ###
 def train(epoch, model, optimizer, train_loader, vis, vis_window, args):
-    model.train() # training mode
+    model.train()  # training mode
     train_loss = []
     nbatches = len(train_loader)
     t_iter_start = time.time()
@@ -439,8 +486,8 @@ def train(epoch, model, optimizer, train_loader, vis, vis_window, args):
 
         t_model_start = time.time()
         (pred_score, gt_score,
-        pred_offsets, gt_offsets,
-        pred_sentence, gt_sent,
+         pred_offsets, gt_offsets,
+         pred_sentence, gt_sent,
          scst_loss, mask_loss) = model(img_batch, tempo_seg_pos,
                                        tempo_seg_neg, sentence_batch,
                                        sample_prob, args.stride_factor,
@@ -471,7 +518,7 @@ def train(epoch, model, optimizer, train_loader, vis, vis_window, args):
 
         # enable the clipping for zero mask loss training
         total_grad_norm = clip_grad_norm_(filter(lambda p: p.requires_grad, model.parameters()),
-                                         args.grad_norm)
+                                          args.grad_norm)
 
         optimizer.step()
 
@@ -480,9 +527,10 @@ def train(epoch, model, optimizer, train_loader, vis, vis_window, args):
         if args.enable_visdom:
             if vis_window['iter'] is None:
                 if not args.distributed or (
-                    args.distributed and dist.get_rank() == 0):
+                        args.distributed and dist.get_rank() == 0):
                     vis_window['iter'] = vis.line(
-                        X=np.arange(epoch*nbatches+train_iter, epoch*nbatches+train_iter+1),
+                        X=np.arange(epoch*nbatches+train_iter,
+                                    epoch*nbatches+train_iter+1),
                         Y=np.asarray(train_loss),
                         opts=dict(title='Training Loss',
                                   xlabel='Training Iteration',
@@ -490,9 +538,10 @@ def train(epoch, model, optimizer, train_loader, vis, vis_window, args):
                     )
             else:
                 if not args.distributed or (
-                    args.distributed and dist.get_rank() == 0):
+                        args.distributed and dist.get_rank() == 0):
                     vis.line(
-                        X=np.arange(epoch*nbatches+train_iter, epoch*nbatches+train_iter+1),
+                        X=np.arange(epoch*nbatches+train_iter,
+                                    epoch*nbatches+train_iter+1),
                         Y=np.asarray([np.mean(train_loss)]),
                         win=vis_window['iter'],
                         opts=dict(title='Training Loss',
@@ -508,12 +557,12 @@ def train(epoch, model, optimizer, train_loader, vis, vis_window, args):
               'mask: {:.4f}, '
               'grad norm: {:.4f} '
               'data time: {:.4f}s, total time: {:.4f}s'.format(
-            train_iter, nbatches, total_loss.data.item(), cls_loss.data.item(),
-            reg_loss.data.item(), sent_loss.data.item(), mask_loss.data.item(),
-            total_grad_norm,
-            t_model_start - t_iter_start,
-            t_model_end - t_iter_start
-        ), end='\r')
+                  train_iter, nbatches, total_loss.data.item(), cls_loss.data.item(),
+                  reg_loss.data.item(), sent_loss.data.item(), mask_loss.data.item(),
+                  total_grad_norm,
+                  t_model_start - t_iter_start,
+                  t_model_end - t_iter_start
+              ), end='\r')
 
         t_iter_start = time.time()
 
@@ -546,9 +595,9 @@ def valid(model, loader):
              pred_offsets, gt_offsets,
              pred_sentence, gt_sent,
              _, mask_loss) = model(img_batch, tempo_seg_pos,
-                                    tempo_seg_neg, sentence_batch,
-                                    stride_factor=args.stride_factor,
-                                    gated_mask=args.gated_mask)
+                                   tempo_seg_neg, sentence_batch,
+                                   stride_factor=args.stride_factor,
+                                   gated_mask=args.gated_mask)
 
             cls_loss = model.module.bce_loss(pred_score, gt_score) * args.cls_weight
             reg_loss = model.module.reg_loss(pred_offsets, gt_offsets) * args.reg_weight

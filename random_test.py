@@ -95,17 +95,9 @@ parser.add_argument('--result_root', default='./results',
                     type=str, help='the feature root')
 ###################################
 
-parser.add_argument("--debug", action="store_true",
-                    default=False, help="debug mode")
-parser.add_argument(
-    "--embedding", choices=["gpt2", None], default=None, help="select embedding type")
-
 parser.set_defaults(cuda=False, learn_mask=False, gated_mask=False)
 
 args = parser.parse_args()
-
-if args.embedding == "gpt2":
-    args.d_model = 768
 
 with open(args.cfgs_file, 'r') as handle:
     options_yaml = yaml.load(handle)
@@ -121,14 +113,13 @@ if args.slide_window_size < args.slide_window_stride:
 def get_dataset(args):
     # process text
     text_proc, raw_data = get_vocab_and_sentences(
-        args.dataset_file, args.max_sentence_len, args.debug)
+        args.dataset_file, args.max_sentence_len)
 
     # Create the dataset and data loader instance
     test_dataset = ANetTestDataset(args.feature_root,
                                    args.slide_window_size,
                                    text_proc, raw_data, args.val_data_folder,
-                                   learn_mask=args.learn_mask,
-                                   debug=args.debug)
+                                   learn_mask=args.learn_mask)
 
     test_loader = DataLoader(test_dataset,
                              batch_size=args.batch_size,
@@ -152,8 +143,7 @@ def get_model(text_proc, args):
                                nsamples=0,
                                kernel_list=args.kernel_list,
                                stride_factor=args.stride_factor,
-                               learn_mask=args.learn_mask,
-                               embedding=args.embedding)
+                               learn_mask=args.learn_mask)
 
     # Initialize the networks and the criterion
     if len(args.start_from) > 0:
@@ -218,15 +208,24 @@ def validate(model, loader, args):
             #       args.pos_thresh,
             #       args.stride_factor,
             #       args.gated_mask)
-            all_proposal_results = model.inference(image_feat,
-                                                   original_num_frame,
-                                                   sampling_sec,
-                                                   args.min_prop_num,
-                                                   args.max_prop_num,
-                                                   args.min_prop_before_nms,
-                                                   args.pos_thresh,
-                                                   args.stride_factor,
-                                                   gated_mask=args.gated_mask)
+            # all_proposal_results = model.inference(image_feat,
+            #                                        original_num_frame,
+            #                                        sampling_sec,
+            #                                        args.min_prop_num,
+            #                                        args.max_prop_num,
+            #                                        args.min_prop_before_nms,
+            #                                        args.pos_thresh,
+            #                                        args.stride_factor,
+            #                                        gated_mask=args.gated_mask)
+            all_proposal_results = model.random_inference(image_feat,
+                                                          original_num_frame,
+                                                          sampling_sec,
+                                                          args.min_prop_num,
+                                                          args.max_prop_num,
+                                                          args.min_prop_before_nms,
+                                                          args.pos_thresh,
+                                                          args.stride_factor,
+                                                          gated_mask=args.gated_mask)
 
             for b in range(len(video_prefix)):
                 vid = video_prefix[b].split('/')[-1]

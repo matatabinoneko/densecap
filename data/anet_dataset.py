@@ -21,12 +21,13 @@ from torch.utils.data import Dataset
 
 from data.utils import segment_iou
 
-def get_vocab_and_sentences(dataset_file, max_length=20):
+
+def get_vocab_and_sentences(dataset_file, max_length=20, debug=False):
     # build vocab and tokenized sentences
     text_proc = torchtext.data.Field(sequential=True, init_token='<init>',
-                                eos_token='<eos>', tokenize='spacy',
-                                lower=True, batch_first=True,
-                                fix_length=max_length)
+                                     eos_token='<eos>', tokenize='spacy',
+                                     lower=True, batch_first=True,
+                                     fix_length=max_length)
     train_sentences = []
     train_val_sentences = []
 
@@ -38,7 +39,9 @@ def get_vocab_and_sentences(dataset_file, max_length=20):
     nsentence['training'] = 0
     nsentence['validation'] = 0
     ntrain_videos = 0
-    for vid, val in data.items():
+    for i, (vid, val) in enumerate(data.items()):
+        if debug and 10 < i:
+            break
         anns = val['annotations']
         split = val['subset']
         if split == 'training':
@@ -52,7 +55,8 @@ def get_vocab_and_sentences(dataset_file, max_length=20):
                 nsentence[split] += 1
 
     # sentences_proc = list(map(text_proc.preprocess, train_sentences)) # build vocab on train only
-    sentences_proc = list(map(text_proc.preprocess, train_val_sentences)) # build vocab on train and val
+    # build vocab on train and val
+    sentences_proc = list(map(text_proc.preprocess, train_val_sentences))
     text_proc.build_vocab(sentences_proc, min_freq=5)
     print('# of words in the vocab: {}'.format(len(text_proc.vocab)))
     print(
@@ -63,11 +67,13 @@ def get_vocab_and_sentences(dataset_file, max_length=20):
     return text_proc, data
 
 # dataloader for training
+
+
 class ANetDataset(Dataset):
     def __init__(self, image_path, split, slide_window_size,
                  dur_file, kernel_list, text_proc, raw_data,
                  pos_thresh, neg_thresh, stride_factor, dataset, save_samplelist=False,
-                 load_samplelist=False, sample_listpath=None):
+                 load_samplelist=False, sample_listpath=None, debug=False):
         super(ANetDataset, self).__init__()
 
         split_paths = []
@@ -79,7 +85,9 @@ class ANetDataset(Dataset):
             self.sample_list = []  # list of list for data samples
 
             train_sentences = []
-            for vid, val in raw_data.items():
+            for i, (vid, val) in enumerate(raw_data.items()):
+                if debug and 10 < i:
+                    break
                 annotations = val['annotations']
                 for split_path in split_paths:
                     if val['subset'] in split and os.path.isfile(os.path.join(split_path, vid + '_bn.npy')):
@@ -88,12 +96,15 @@ class ANetDataset(Dataset):
                             train_sentences.append(ann['sentence'])
 
             train_sentences = list(map(text_proc.preprocess, train_sentences))
-            sentence_idx = text_proc.numericalize(text_proc.pad(train_sentences),)  # put in memory
+            sentence_idx = text_proc.numericalize(
+                text_proc.pad(train_sentences),)  # put in memory
             if sentence_idx.size(0) != len(train_sentences):
                 raise Exception("Error in numericalize sentences")
 
             idx = 0
-            for vid, val in raw_data.items():
+            for i, (vid, val) in enumerate(raw_data.items()):
+                if debug and 10 < i:
+                    break
                 for split_path in split_paths:
                     if val['subset'] in split and os.path.isfile(os.path.join(split_path, vid + '_bn.npy')):
                         for ann in val['annotations']:
@@ -117,17 +128,22 @@ class ANetDataset(Dataset):
             anc_cen_all = np.hstack(anc_cen_lst)
 
             frame_to_second = {}
-            sampling_sec = 0.5 # hard coded, only support 0.5
+            sampling_sec = 0.5  # hard coded, only support 0.5
             with open(dur_file) as f:
                 if dataset == 'anet':
                     for line in f:
-                        vid_name, vid_dur, vid_frame = [l.strip() for l in line.split(',')]
-                        frame_to_second[vid_name] = float(vid_dur)*int(float(vid_frame)*1./int(float(vid_dur))*sampling_sec)*1./float(vid_frame)
-                    frame_to_second['_0CqozZun3U'] = sampling_sec # a missing video in anet
+                        vid_name, vid_dur, vid_frame = [
+                            l.strip() for l in line.split(',')]
+                        frame_to_second[vid_name] = float(
+                            vid_dur)*int(float(vid_frame)*1./int(float(vid_dur))*sampling_sec)*1./float(vid_frame)
+                    # a missing video in anet
+                    frame_to_second['_0CqozZun3U'] = sampling_sec
                 elif dataset == 'yc2':
                     for line in f:
-                        vid_name, vid_dur, vid_frame = [l.strip() for l in line.split(',')]
-                        frame_to_second[vid_name] = float(vid_dur)*math.ceil(float(vid_frame)*1./float(vid_dur)*sampling_sec)*1./float(vid_frame) # for yc2
+                        vid_name, vid_dur, vid_frame = [
+                            l.strip() for l in line.split(',')]
+                        frame_to_second[vid_name] = float(
+                            vid_dur)*math.ceil(float(vid_frame)*1./float(vid_dur)*sampling_sec)*1./float(vid_frame)  # for yc2
                 else:
                     raise NotImplementedError
 
@@ -138,14 +154,16 @@ class ANetDataset(Dataset):
             with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
                 results = [None]*len(raw_data)
                 vid_idx = 0
-                for vid, val in raw_data.items():
+                for i, (vid, val) in enumerate(raw_data.items()):
+                    if debug and 10 < i:
+                        break
                     annotations = val['annotations']
                     for split_path in split_paths:
                         if val['subset'] in split and os.path.isfile(os.path.join(split_path, vid + '_bn.npy')):
                             results[vid_idx] = pool.apply_async(_get_pos_neg,
-                                         (split_path, annotations, vid,
-                                          slide_window_size, frame_to_second[vid], anc_len_all,
-                                          anc_cen_all, pos_thresh, neg_thresh))
+                                                                (split_path, annotations, vid,
+                                                                 slide_window_size, frame_to_second[vid], anc_len_all,
+                                                                 anc_cen_all, pos_thresh, neg_thresh))
                             vid_idx += 1
                 results = results[:vid_idx]
                 for i, r in enumerate(results):
@@ -162,7 +180,7 @@ class ANetDataset(Dataset):
                         # all neg_segs are the same, since they need to be negative
                         # for all samples
                         all_segs = pos_seg[k]
-                        sent = all_segs[0][-1] #[s[-1] for s in all_segs]
+                        sent = all_segs[0][-1]  # [s[-1] for s in all_segs]
                         other = [s[:-1] for s in all_segs]
                         self.sample_list.append(
                             (video_prefix, other, sent, neg_seg, total_frame))
@@ -196,7 +214,7 @@ class ANetDataset(Dataset):
             np.load(video_prefix + '_resnet.npy')).float()
         bn_feat = torch.from_numpy(np.load(video_prefix + '_bn.npy')).float()
         img_feat = torch.FloatTensor(np.zeros((self.slide_window_size,
-                                     resnet_feat.size(1)+bn_feat.size(1))))
+                                               resnet_feat.size(1)+bn_feat.size(1))))
         torch.cat((resnet_feat, bn_feat), dim=1,
                   out=img_feat[:min(total_frame, self.slide_window_size)])
 
@@ -265,7 +283,7 @@ def _get_pos_neg(split_path, annotations, vid,
                     pos_seg[item[0]].append(tuple(item[1:]))
                     break
 
-            if not filled and len(potential_match)>0:
+            if not filled and len(potential_match) > 0:
                 # randomly choose one
                 shuffle(potential_match)
                 item = potential_match[0]
@@ -301,7 +319,8 @@ def anet_collate_fn(batch_lst):
 
     batch_size = len(batch_lst)
 
-    sentence_batch = torch.LongTensor(np.ones((batch_size, sentence.size(0)),dtype='int64'))
+    sentence_batch = torch.LongTensor(
+        np.ones((batch_size, sentence.size(0)), dtype='int64'))
     img_batch = torch.FloatTensor(np.zeros((batch_size,
                                             img_feat.size(0),
                                             img_feat.size(1))))
@@ -311,7 +330,7 @@ def anet_collate_fn(batch_lst):
     for batch_idx in range(batch_size):
         pos_seg, sentence, neg_seg, img_feat = batch_lst[batch_idx]
 
-        img_batch[batch_idx,:] = img_feat
+        img_batch[batch_idx, :] = img_feat
 
         pos_seg_tensor = torch.FloatTensor(pos_seg)
         sentence_batch[batch_idx] = sentence.data
@@ -319,11 +338,12 @@ def anet_collate_fn(batch_lst):
         # sample positive anchors
         perm_idx = torch.randperm(len(pos_seg))
         if len(pos_seg) >= sample_each:
-            tempo_seg_pos[batch_idx,:,:] = pos_seg_tensor[perm_idx[:sample_each]]
+            tempo_seg_pos[batch_idx, :, :] = pos_seg_tensor[perm_idx[:sample_each]]
         else:
-            tempo_seg_pos[batch_idx,:len(pos_seg),:] = pos_seg_tensor
-            idx = torch.multinomial(torch.ones(len(pos_seg)), sample_each-len(pos_seg), True)
-            tempo_seg_pos[batch_idx,len(pos_seg):,:] = pos_seg_tensor[idx]
+            tempo_seg_pos[batch_idx, :len(pos_seg), :] = pos_seg_tensor
+            idx = torch.multinomial(torch.ones(len(pos_seg)),
+                                    sample_each-len(pos_seg), True)
+            tempo_seg_pos[batch_idx, len(pos_seg):, :] = pos_seg_tensor[idx]
 
         # sample negative anchors
         neg_seg_tensor = torch.FloatTensor(neg_seg)
@@ -333,7 +353,7 @@ def anet_collate_fn(batch_lst):
         else:
             tempo_seg_neg[batch_idx, :len(neg_seg), :] = neg_seg_tensor
             idx = torch.multinomial(torch.ones(len(neg_seg)),
-                                    sample_each - len(neg_seg),True)
+                                    sample_each - len(neg_seg), True)
             tempo_seg_neg[batch_idx, len(neg_seg):, :] = neg_seg_tensor[idx]
 
     return (img_batch, tempo_seg_pos, tempo_seg_neg, sentence_batch)
